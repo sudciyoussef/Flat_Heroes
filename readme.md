@@ -1,16 +1,16 @@
-## What's working
+## Current features
 
-- Basic player movement (left/right with arrow keys or A/D)
-- Player stays on screen
-- Game loop running at 60fps
+- Player movement with arrow keys (or WASD)
+- Gravity and jumping
+- Multiple platforms at different heights
+- Player lands on platforms correctly
 
-## Files
+## Controls
 
-- `index.html` - Main page
-- `style.css` - Styling
-- `game.js` - Game code
+- Left/Right arrows (or A/D): Move
+- Space: Jump
 
 ## Next steps
 
-- Add gravity
-- Add platforms to jump on
+- Add enemies
+- Add collectibles
