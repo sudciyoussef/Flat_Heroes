@@ -1,16 +1,17 @@
-## Current features
+## Features
 
-- Player movement with arrow keys (or WASD)
-- Gravity and jumping
-- Multiple platforms at different heights
-- Player lands on platforms correctly
+- Player movement and jumping
+- Platforms to jump on
+- Flying enemies that move randomly
+- Collision detection between player and enemies
+- Lives system (3 lives)
 
 ## Controls
 
-- Left/Right arrows (or A/D): Move
+- Arrow keys or WASD: Move
 - Space: Jump
 
-## Next steps
+## Next
 
-- Add enemies
-- Add collectibles
+- Add coins to collect
+- Add score system
