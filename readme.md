@@ -1,17 +1,22 @@
+## What's new
+
+- Gold coins you can collect (+50 points each)
+- Score counter in the UI
+
 ## Features
 
-- Player movement and jumping
-- Platforms to jump on
-- Flying enemies that move randomly
-- Collision detection between player and enemies
-- Lives system (3 lives)
+- Player with movement and jumping
+- Platforms
+- Wandering enemies
+- Collectible coins
+- Lives and score system
 
 ## Controls
 
-- Arrow keys or WASD: Move
+- Arrows / WASD: Move
 - Space: Jump
 
-## Next
+## TODO
 
-- Add coins to collect
-- Add score system
+- Make enemies harder to avoid
+- Add different enemy types

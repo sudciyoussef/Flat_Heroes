@@ -1,4 +1,4 @@
-// VERSION 3 - Ajout des ennemis wanderers
+// VERSION 4 - Ajout des pièces à collecter
 
 class Vector2D {
     constructor(x = 0, y = 0) {
@@ -37,6 +37,47 @@ class Platform {
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+class Coin {
+    constructor(x, y) {
+        this.pos = new Vector2D(x, y);
+        this.radius = 8;
+        this.color = '#ffdd00';
+        this.bobOffset = Math.random() * Math.PI * 2;
+    }
+    
+    update(dt) {
+        // Simple update for now
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        
+        const bobY = Math.sin(Date.now() * 0.003 + this.bobOffset) * 6;
+        ctx.translate(this.pos.x, this.pos.y + bobY);
+        
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#fff8aa';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    getBounds() {
+        return {
+            x: this.pos.x - this.radius,
+            y: this.pos.y - this.radius,
+            width: this.radius * 2,
+            height: this.radius * 2
+        };
     }
 }
 
@@ -98,7 +139,7 @@ class Player {
         }
         
         if (this.pos.y > 700) {
-            return true; // Player died
+            return true;
         }
         return false;
     }
@@ -162,7 +203,6 @@ class Enemy {
         
         this.pos = this.pos.add(this.vel.multiply(dt));
         
-        // Bounce on edges
         if (this.pos.x < 30) {
             this.pos.x = 30;
             this.vel.x = Math.abs(this.vel.x);
@@ -218,12 +258,14 @@ class Game {
         this.player = new Player(100, 200);
         this.platforms = [];
         this.enemies = [];
+        this.coins = [];
         this.keys = {};
         this.score = 0;
         this.lives = 3;
         
         this.createPlatforms();
         this.spawnInitialEnemies();
+        this.spawnInitialCoins();
         this.setupInput();
         this.lastTime = performance.now();
         this.run();
@@ -243,6 +285,17 @@ class Game {
         this.enemies.push(new Enemy(600, 200));
     }
     
+    spawnInitialCoins() {
+        this.coins.push(new Coin(250, 200));
+        this.coins.push(new Coin(400, 150));
+        this.coins.push(new Coin(600, 220));
+        
+        this.coins.push(new Coin(200, 430));
+        this.coins.push(new Coin(280, 430));
+        this.coins.push(new Coin(560, 430));
+        this.coins.push(new Coin(390, 210));
+    }
+    
     setupInput() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.key] = true;
@@ -256,8 +309,17 @@ class Game {
     }
     
     checkCollisions() {
+        // Coin collection
+        for (let i = this.coins.length - 1; i >= 0; i--) {
+            if (this.rectCollision(this.player.getBounds(), this.coins[i].getBounds())) {
+                this.score += 50;
+                this.coins.splice(i, 1);
+            }
+        }
+        
         if (this.player.invincible) return;
         
+        // Enemy collision
         const playerBounds = this.player.getBounds();
         for (let i = 0; i < this.enemies.length; i++) {
             if (this.rectCollision(playerBounds, this.enemies[i].getBounds())) {
@@ -292,7 +354,9 @@ class Game {
         this.score = 0;
         this.player = new Player(100, 200);
         this.enemies = [];
+        this.coins = [];
         this.spawnInitialEnemies();
+        this.spawnInitialCoins();
     }
     
     update(dt) {
@@ -302,6 +366,7 @@ class Game {
         }
         
         this.enemies.forEach(enemy => enemy.update(dt));
+        this.coins.forEach(coin => coin.update(dt));
         
         this.checkCollisions();
         
@@ -314,6 +379,7 @@ class Game {
         this.ctx.fillRect(0, 0, 800, 600);
         
         this.platforms.forEach(p => p.draw(this.ctx));
+        this.coins.forEach(c => c.draw(this.ctx));
         this.enemies.forEach(e => e.draw(this.ctx));
         this.player.draw(this.ctx);
     }
