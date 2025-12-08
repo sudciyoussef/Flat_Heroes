@@ -12,6 +12,7 @@ body {
     min-height: 100vh;
     font-family: 'Courier New', monospace;
     color: #fff;
+    overflow: hidden;
 }
 
 #gameContainer {
@@ -23,10 +24,17 @@ canvas {
     background: #1a1a1a;
     display: block;
     margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
 #ui {
     margin-top: 20px;
     font-size: 20px;
     color: #00ff88;
+}
+
+#instructions {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #888;
 }

@@ -1,22 +1,23 @@
-## What's new
+## New stuff
 
-- Gold coins you can collect (+50 points each)
-- Score counter in the UI
+- **Chaser enemies** (pink diamonds) that actually follow you around
+- Double jump! Press space twice
+- Enemies spawn from screen edges now
+- Difficulty increases as your score goes up
 
 ## Features
 
-- Player with movement and jumping
-- Platforms
-- Wandering enemies
-- Collectible coins
-- Lives and score system
+- Movement with physics
+- Platforms you can jump on
+- Two enemy types:
+  - Orange triangles (wander randomly)
+  - Pink diamonds (chase you down)
+- Gold coins worth 50 points
+- 3 lives with invincibility when hit
+- Score tracking
 
 ## Controls
 
-- Arrows / WASD: Move
-- Space: Jump
+- Left/Right or A/D: Move
+- Space/W/Up Arrow: Jump (can double jump!)
 
-## TODO
-
-- Make enemies harder to avoid
-- Add different enemy types
