@@ -34,7 +34,13 @@ canvas {
 }
 
 #instructions {
-    margin-top: 10px;
+    margin-top: 15px;
     font-size: 14px;
     color: #888;
+    line-height: 1.6;
+}
+
+.highlight {
+    color: #00ff88;
+    font-weight: bold;
 }

@@ -1,23 +1,21 @@
-## New stuff
-
-- **Chaser enemies** (pink diamonds) that actually follow you around
-- Double jump! Press space twice
-- Enemies spawn from screen edges now
-- Difficulty increases as your score goes up
-
 ## Features
 
-- Movement with physics
-- Platforms you can jump on
-- Two enemy types:
-  - Orange triangles (wander randomly)
-  - Pink diamonds (chase you down)
-- Gold coins worth 50 points
-- 3 lives with invincibility when hit
-- Score tracking
+- Smooth platformer movement with double jump
+- Two types of flying enemies with different behaviors
+- Collectible coins scattered around the level
+- Progressive difficulty (more enemies spawn as you score higher)
+- Lives system with temporary invincibility
 
-## Controls
+## How to play
 
-- Left/Right or A/D: Move
-- Space/W/Up Arrow: Jump (can double jump!)
+**Controls:**
+- Arrow keys or A/D: Move left/right
+- Space, W, or Up Arrow: Jump (press again in air for double jump)
+- R: Restart after game over
 
+**Goal:**
+Collect gold coins (+50 points) while avoiding enemies. You have 3 lives.
+
+**Enemies:**
+- Orange triangles: Wander around randomly
+- Pink diamonds: Chase after you

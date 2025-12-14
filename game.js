@@ -1,4 +1,4 @@
-// VERSION 5 - Ajout des Chasers + Amélioration des pièces
+// VERSION 6 - Version finale complète avec particles et tous les effets
 
 class Vector2D {
     constructor(x = 0, y = 0) {
@@ -39,6 +39,47 @@ class Vector2D {
         }
         return new Vector2D(this.x, this.y);
     }
+    
+    copy() {
+        return new Vector2D(this.x, this.y);
+    }
+}
+
+class Particle {
+    constructor(x, y, vx, vy, color, size, life) {
+        this.pos = new Vector2D(x, y);
+        this.vel = new Vector2D(vx, vy);
+        this.color = color;
+        this.size = size;
+        this.life = life;
+        this.maxLife = life;
+        this.gravity = 800;
+    }
+    
+    update(dt) {
+        this.vel.y += this.gravity * dt;
+        this.pos = this.pos.add(this.vel.multiply(dt));
+        this.life -= dt;
+        this.vel.x *= 0.98;
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        const alpha = this.life / this.maxLife;
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(
+            Math.floor(this.pos.x - this.size/2), 
+            Math.floor(this.pos.y - this.size/2), 
+            this.size, 
+            this.size
+        );
+        ctx.restore();
+    }
+    
+    isDead() {
+        return this.life <= 0;
+    }
 }
 
 class Platform {
@@ -47,14 +88,25 @@ class Platform {
         this.y = y;
         this.width = width;
         this.height = height;
+        this.color = '#333';
     }
     
     draw(ctx) {
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
+        
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+    
+    getBounds() {
+        return {
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
+        };
     }
 }
 
@@ -63,11 +115,14 @@ class Coin {
         this.pos = new Vector2D(x, y);
         this.radius = 8;
         this.color = '#ffdd00';
+        this.collected = false;
+        this.rotation = 0;
         this.bobOffset = Math.random() * Math.PI * 2;
         this.sparkleTimer = 0;
     }
     
     update(dt) {
+        this.rotation += dt * 4;
         this.sparkleTimer += dt;
     }
     
@@ -77,32 +132,27 @@ class Coin {
         const bobY = Math.sin(Date.now() * 0.003 + this.bobOffset) * 6;
         ctx.translate(this.pos.x, this.pos.y + bobY);
         
-        // Outer circle
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fill();
         
-        // Inner circle
         ctx.fillStyle = '#fff8aa';
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
         ctx.fill();
         
-        // Center dot
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 0.25, 0, Math.PI * 2);
         ctx.fill();
         
-        // Border
         ctx.strokeStyle = '#cc9900';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Sparkle
         if (Math.sin(this.sparkleTimer * 5) > 0.8) {
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
@@ -144,18 +194,19 @@ class Player {
         this.maxJumps = 2;
         this.invincible = false;
         this.invincibleTimer = 0;
+        this.trail = [];
     }
     
     update(dt, keys, platforms) {
         this.vel.x = 0;
-        if (keys['ArrowLeft'] || keys['a']) {
+        if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
             this.vel.x = -this.moveSpeed;
         }
-        if (keys['ArrowRight'] || keys['d']) {
+        if (keys['ArrowRight'] || keys['d'] || keys['D']) {
             this.vel.x = this.moveSpeed;
         }
         
-        if ((keys[' '] || keys['w'] || keys['ArrowUp']) && this.jumpCount < this.maxJumps) {
+        if ((keys[' '] || keys['w'] || keys['W'] || keys['ArrowUp']) && this.jumpCount < this.maxJumps) {
             if (!this.jumpPressed) {
                 this.vel.y = this.jumpForce;
                 this.jumpCount++;
@@ -166,29 +217,32 @@ class Player {
             this.jumpPressed = false;
         }
         
-        this.vel.y += this.gravity * dt;
-        this.vel.y = Math.min(this.vel.y, this.maxFallSpeed);
+        if (!this.onGround) {
+            this.vel.y += this.gravity * dt;
+            this.vel.y = Math.min(this.vel.y, this.maxFallSpeed);
+        }
         
         this.pos.x += this.vel.x * dt;
         this.pos.y += this.vel.y * dt;
         
         this.onGround = false;
         platforms.forEach(platform => {
-            if (this.vel.y > 0 &&
-                this.pos.x + this.size/2 > platform.x &&
-                this.pos.x - this.size/2 < platform.x + platform.width) {
-                
-                const playerBottom = this.pos.y + this.size/2;
-                if (playerBottom > platform.y && playerBottom < platform.y + 20) {
-                    this.pos.y = platform.y - this.size/2;
-                    this.vel.y = 0;
-                    this.onGround = true;
-                    this.jumpCount = 0;
-                }
+            if (this.checkPlatformCollision(platform)) {
+                this.onGround = true;
+                this.jumpCount = 0;
             }
         });
         
-        this.pos.x = Math.max(this.size/2, Math.min(800 - this.size/2, this.pos.x));
+        if (this.pos.x - this.size/2 < 0) {
+            this.pos.x = this.size/2;
+        }
+        if (this.pos.x + this.size/2 > 800) {
+            this.pos.x = 800 - this.size/2;
+        }
+        
+        if (this.pos.y > 700) {
+            return true;
+        }
         
         if (this.invincible) {
             this.invincibleTimer -= dt;
@@ -197,13 +251,51 @@ class Player {
             }
         }
         
-        if (this.pos.y > 700) {
-            return true;
+        if (Math.abs(this.vel.x) > 50 || Math.abs(this.vel.y) > 50) {
+            this.trail.unshift({x: this.pos.x, y: this.pos.y, alpha: 1});
+        }
+        if (this.trail.length > 8) this.trail.pop();
+        this.trail.forEach(t => t.alpha *= 0.85);
+        
+        return false;
+    }
+    
+    checkPlatformCollision(platform) {
+        const playerBounds = this.getBounds();
+        const platBounds = platform.getBounds();
+        
+        if (this.vel.y < 0) return false;
+        
+        if (playerBounds.x + playerBounds.width > platBounds.x &&
+            playerBounds.x < platBounds.x + platBounds.width) {
+            
+            const playerBottom = playerBounds.y + playerBounds.height;
+            const prevPlayerBottom = playerBottom - this.vel.y * (1/60);
+            
+            if (prevPlayerBottom <= platBounds.y && playerBottom >= platBounds.y) {
+                this.pos.y = platBounds.y - this.size/2;
+                this.vel.y = 0;
+                return true;
+            }
         }
         return false;
     }
     
     draw(ctx) {
+        this.trail.forEach((t, i) => {
+            ctx.save();
+            ctx.globalAlpha = t.alpha * 0.4;
+            ctx.fillStyle = this.color;
+            const s = this.size * 0.8;
+            ctx.fillRect(
+                Math.floor(t.x - s/2), 
+                Math.floor(t.y - s/2), 
+                s, 
+                s
+            );
+            ctx.restore();
+        });
+        
         ctx.save();
         
         if (this.invincible) {
@@ -214,8 +306,26 @@ class Player {
             }
         }
         
+        ctx.translate(Math.floor(this.pos.x), Math.floor(this.pos.y));
+        
+        let scaleX = 1;
+        let scaleY = 1;
+        if (!this.onGround && this.vel.y > 100) {
+            scaleY = 0.9;
+            scaleX = 1.1;
+        } else if (!this.onGround && this.vel.y < -100) {
+            scaleY = 1.1;
+            scaleX = 0.9;
+        }
+        
+        ctx.scale(scaleX, scaleY);
+        
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.pos.x - this.size/2, this.pos.y - this.size/2, this.size, this.size);
+        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+        
+        ctx.fillStyle = '#1a1a1a';
+        const eyeOffset = this.vel.x > 0 ? 3 : this.vel.x < 0 ? -3 : 0;
+        ctx.fillRect(eyeOffset - 2, -3, 4, 4);
         
         ctx.restore();
     }
@@ -236,6 +346,7 @@ class Enemy {
         this.vel = new Vector2D(0, 0);
         this.type = type;
         this.size = 18;
+        this.dead = false;
         
         if (type === 'wanderer') {
             this.color = '#ff6600';
@@ -243,6 +354,7 @@ class Enemy {
             this.wanderAngle = Math.random() * Math.PI * 2;
             this.changeTimer = 0;
             this.changeInterval = 1 + Math.random() * 2;
+            this.scoreValue = 100;
             
             this.vel = new Vector2D(
                 Math.cos(this.wanderAngle) * this.speed,
@@ -252,6 +364,7 @@ class Enemy {
             this.color = '#ff0066';
             this.speed = 150;
             this.maxSpeed = 200;
+            this.scoreValue = 200;
         }
     }
     
@@ -287,6 +400,7 @@ class Enemy {
                 this.pos.y = 570;
                 this.vel.y = -Math.abs(this.vel.y);
             }
+            
         } else if (this.type === 'chaser') {
             const toPlayer = player.pos.subtract(this.pos);
             const distance = toPlayer.magnitude();
@@ -308,7 +422,7 @@ class Enemy {
     
     draw(ctx) {
         ctx.save();
-        ctx.translate(this.pos.x, this.pos.y);
+        ctx.translate(Math.floor(this.pos.x), Math.floor(this.pos.y));
         
         if (this.vel.magnitude() > 10) {
             const angle = Math.atan2(this.vel.y, this.vel.x);
@@ -356,25 +470,38 @@ class Game {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
+        this.width = canvas.width;
+        this.height = canvas.height;
+        
         this.player = new Player(100, 200);
         this.platforms = [];
         this.enemies = [];
         this.coins = [];
+        this.particles = [];
         this.keys = {};
+        
         this.score = 0;
         this.lives = 3;
+        this.gameOver = false;
+        
         this.enemySpawnTimer = 0;
-        this.enemySpawnInterval = 5;
+        this.enemySpawnInterval = 4;
+        this.maxEnemies = 8;
+        
+        this.coinSpawnTimer = 0;
+        this.coinSpawnInterval = 5;
+        
+        this.lastTime = performance.now();
         
         this.createPlatforms();
         this.spawnInitialEnemies();
         this.spawnInitialCoins();
         this.setupInput();
-        this.lastTime = performance.now();
         this.run();
     }
     
     createPlatforms() {
+        this.platforms = [];
         this.platforms.push(new Platform(0, 560, 800, 40));
         this.platforms.push(new Platform(150, 450, 150, 20));
         this.platforms.push(new Platform(500, 450, 150, 20));
@@ -416,9 +543,9 @@ class Game {
     }
     
     spawnNewEnemy() {
-        if (this.enemies.length >= 8) return;
+        if (this.enemies.length >= this.maxEnemies) return;
         
-        const chaserChance = Math.min(0.3 + (this.score / 1000) * 0.1, 0.5);
+        const chaserChance = Math.min(0.2 + (this.score / 1000) * 0.15, 0.5);
         const type = Math.random() < chaserChance ? 'chaser' : 'wanderer';
         
         const side = Math.floor(Math.random() * 4);
@@ -441,10 +568,71 @@ class Game {
         this.enemies.push(new Enemy(x, y, type));
     }
     
+    spawnNewCoinGroup() {
+        const numCoins = 1 + Math.floor(Math.random() * 2);
+        
+        for (let i = 0; i < numCoins; i++) {
+            if (Math.random() > 0.5) {
+                const x = 100 + Math.random() * 600;
+                const y = 100 + Math.random() * 300;
+                this.coins.push(new Coin(x, y));
+            } else {
+                const platform = this.platforms[1 + Math.floor(Math.random() * (this.platforms.length - 1))];
+                const x = platform.x + 30 + Math.random() * (platform.width - 60);
+                const y = platform.y - 20;
+                this.coins.push(new Coin(x, y));
+            }
+        }
+    }
+    
+    update(dt) {
+        dt = Math.min(dt, 0.05);
+        
+        if (this.gameOver) {
+            if (this.keys['r'] || this.keys['R']) {
+                this.reset();
+            }
+            return;
+        }
+        
+        this.enemySpawnTimer += dt;
+        if (this.enemySpawnTimer >= this.enemySpawnInterval) {
+            this.enemySpawnTimer = 0;
+            this.spawnNewEnemy();
+            this.enemySpawnInterval = Math.max(2, 4 - (this.score / 1500));
+            this.maxEnemies = Math.min(12, 8 + Math.floor(this.score / 600));
+        }
+        
+        this.coinSpawnTimer += dt;
+        if (this.coinSpawnTimer >= this.coinSpawnInterval) {
+            this.coinSpawnTimer = 0;
+            this.spawnNewCoinGroup();
+        }
+        
+        const playerDied = this.player.update(dt, this.keys, this.platforms);
+        if (playerDied) {
+            this.playerHit();
+        }
+        
+        this.enemies.forEach(enemy => enemy.update(dt, this.player));
+        this.enemies = this.enemies.filter(e => !e.dead);
+        
+        this.coins.forEach(coin => coin.update(dt));
+        
+        this.particles.forEach(p => p.update(dt));
+        this.particles = this.particles.filter(p => !p.isDead());
+        
+        this.checkCollisions();
+        
+        document.getElementById('score').textContent = this.score;
+        document.getElementById('lives').textContent = this.lives;
+    }
+    
     checkCollisions() {
         for (let i = this.coins.length - 1; i >= 0; i--) {
             if (this.rectCollision(this.player.getBounds(), this.coins[i].getBounds())) {
                 this.score += 50;
+                this.createCoinExplosion(this.coins[i].pos.x, this.coins[i].pos.y);
                 this.coins.splice(i, 1);
             }
         }
@@ -458,6 +646,20 @@ class Game {
                 break;
             }
         }
+        
+        if (this.player.vel.y > 0) {
+            for (let i = this.enemies.length - 1; i >= 0; i--) {
+                const enemy = this.enemies[i];
+                if (this.rectCollision(playerBounds, enemy.getBounds())) {
+                    if (this.player.pos.y < enemy.pos.y - 5) {
+                        this.score += enemy.scoreValue;
+                        this.player.vel.y = -350;
+                        this.createExplosion(enemy.pos.x, enemy.pos.y, enemy.color);
+                        this.enemies.splice(i, 1);
+                    }
+                }
+            }
+        }
     }
     
     rectCollision(r1, r2) {
@@ -468,57 +670,92 @@ class Game {
     }
     
     playerHit() {
+        if (this.player.invincible) return;
+        
         this.lives--;
         this.player.invincible = true;
         this.player.invincibleTimer = 2;
+        this.createExplosion(this.player.pos.x, this.player.pos.y, '#ff3366');
         
         if (this.lives <= 0) {
-            this.resetGame();
+            this.gameOver = true;
         } else {
             this.player.pos = new Vector2D(100, 200);
             this.player.vel = new Vector2D(0, 0);
         }
     }
     
-    resetGame() {
-        this.lives = 3;
-        this.score = 0;
-        this.player = new Player(100, 200);
-        this.enemies = [];
-        this.coins = [];
-        this.spawnInitialEnemies();
-        this.spawnInitialCoins();
+    createExplosion(x, y, color) {
+        for (let i = 0; i < 20; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 200 + 50;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed - 100;
+            const size = Math.random() * 4 + 2;
+            this.particles.push(new Particle(x, y, vx, vy, color, size, 0.8));
+        }
     }
     
-    update(dt) {
-        const playerDied = this.player.update(dt, this.keys, this.platforms);
-        if (playerDied) {
-            this.playerHit();
+    createCoinExplosion(x, y) {
+        for (let i = 0; i < 15; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 150 + 50;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed - 100;
+            const size = Math.random() * 3 + 2;
+            this.particles.push(new Particle(x, y, vx, vy, '#ffdd00', size, 0.6));
         }
-        
-        this.enemies.forEach(enemy => enemy.update(dt, this.player));
-        this.coins.forEach(coin => coin.update(dt));
-        
-        this.enemySpawnTimer += dt;
-        if (this.enemySpawnTimer >= this.enemySpawnInterval) {
-            this.enemySpawnTimer = 0;
-            this.spawnNewEnemy();
-        }
-        
-        this.checkCollisions();
-        
-        document.getElementById('score').textContent = this.score;
-        document.getElementById('lives').textContent = this.lives;
     }
     
     draw() {
         this.ctx.fillStyle = '#1a1a1a';
-        this.ctx.fillRect(0, 0, 800, 600);
+        this.ctx.fillRect(0, 0, this.width, this.height);
         
         this.platforms.forEach(p => p.draw(this.ctx));
         this.coins.forEach(c => c.draw(this.ctx));
+        this.particles.forEach(p => p.draw(this.ctx));
         this.enemies.forEach(e => e.draw(this.ctx));
         this.player.draw(this.ctx);
+        
+        if (this.gameOver) {
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+            
+            this.ctx.fillStyle = '#ff3366';
+            this.ctx.font = 'bold 72px Courier New';
+            this.ctx.textAlign = 'center';
+            this.ctx.shadowColor = '#ff3366';
+            this.ctx.shadowBlur = 30;
+            this.ctx.fillText('GAME OVER', 400, 250);
+            
+            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = '#00ff88';
+            this.ctx.font = '28px Courier New';
+            this.ctx.fillText('Final Score: ' + this.score, 400, 310);
+            
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '24px Courier New';
+            this.ctx.fillText('Press R to Restart', 400, 420);
+            this.ctx.restore();
+        }
+    }
+    
+    reset() {
+        this.player = new Player(100, 200);
+        this.enemies = [];
+        this.coins = [];
+        this.particles = [];
+        this.score = 0;
+        this.lives = 3;
+        this.gameOver = false;
+        this.enemySpawnTimer = 0;
+        this.enemySpawnInterval = 4;
+        this.maxEnemies = 8;
+        this.coinSpawnTimer = 0;
+        this.createPlatforms();
+        this.spawnInitialEnemies();
+        this.spawnInitialCoins();
     }
     
     run() {
@@ -526,7 +763,7 @@ class Game {
         const dt = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
         
-        this.update(Math.min(dt, 0.05));
+        this.update(dt);
         this.draw();
         
         requestAnimationFrame(() => this.run());
