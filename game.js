@@ -1,5 +1,7 @@
-// VERSION 6 - Version finale complète avec particles et tous les effets
+// Flat Heroes Clone - Final Version
 
+// VECTOR2D CLASS
+// Helper class for 2D vector math
 class Vector2D {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -45,6 +47,8 @@ class Vector2D {
     }
 }
 
+// PARTICLE CLASS
+// Visual effects for explosions
 class Particle {
     constructor(x, y, vx, vy, color, size, life) {
         this.pos = new Vector2D(x, y);
@@ -82,6 +86,8 @@ class Particle {
     }
 }
 
+// PLATFORM CLASS
+// Solid platforms the player can land on
 class Platform {
     constructor(x, y, width, height) {
         this.x = x;
@@ -110,6 +116,8 @@ class Platform {
     }
 }
 
+// COIN CLASS
+// Collectible gold coins
 class Coin {
     constructor(x, y) {
         this.pos = new Vector2D(x, y);
@@ -129,9 +137,11 @@ class Coin {
     draw(ctx) {
         ctx.save();
         
+        // Bobbing animation
         const bobY = Math.sin(Date.now() * 0.003 + this.bobOffset) * 6;
         ctx.translate(this.pos.x, this.pos.y + bobY);
         
+        // Draw gold coin with shine effect
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
@@ -153,6 +163,7 @@ class Coin {
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.stroke();
         
+        // Sparkle effect
         if (Math.sin(this.sparkleTimer * 5) > 0.8) {
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
@@ -179,6 +190,8 @@ class Coin {
     }
 }
 
+// PLAYER CLASS 
+// The player character
 class Player {
     constructor(x, y) {
         this.pos = new Vector2D(x, y);
@@ -191,13 +204,14 @@ class Player {
         this.maxFallSpeed = 600;
         this.onGround = false;
         this.jumpCount = 0;
-        this.maxJumps = 2;
+        this.maxJumps = 2; // double jump
         this.invincible = false;
         this.invincibleTimer = 0;
         this.trail = [];
     }
     
     update(dt, keys, platforms) {
+        // Horizontal movement
         this.vel.x = 0;
         if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
             this.vel.x = -this.moveSpeed;
@@ -206,6 +220,7 @@ class Player {
             this.vel.x = this.moveSpeed;
         }
         
+        // Jump with double jump
         if ((keys[' '] || keys['w'] || keys['W'] || keys['ArrowUp']) && this.jumpCount < this.maxJumps) {
             if (!this.jumpPressed) {
                 this.vel.y = this.jumpForce;
@@ -217,14 +232,17 @@ class Player {
             this.jumpPressed = false;
         }
         
+        // Apply gravity
         if (!this.onGround) {
             this.vel.y += this.gravity * dt;
             this.vel.y = Math.min(this.vel.y, this.maxFallSpeed);
         }
         
+        // Update position
         this.pos.x += this.vel.x * dt;
         this.pos.y += this.vel.y * dt;
         
+        // Check platform collisions
         this.onGround = false;
         platforms.forEach(platform => {
             if (this.checkPlatformCollision(platform)) {
@@ -233,6 +251,7 @@ class Player {
             }
         });
         
+        // Screen boundaries
         if (this.pos.x - this.size/2 < 0) {
             this.pos.x = this.size/2;
         }
@@ -240,10 +259,12 @@ class Player {
             this.pos.x = 800 - this.size/2;
         }
         
+        // Death if fall off screen
         if (this.pos.y > 700) {
             return true;
         }
         
+        // Invincibility timer
         if (this.invincible) {
             this.invincibleTimer -= dt;
             if (this.invincibleTimer <= 0) {
@@ -251,6 +272,7 @@ class Player {
             }
         }
         
+        // Trail effect
         if (Math.abs(this.vel.x) > 50 || Math.abs(this.vel.y) > 50) {
             this.trail.unshift({x: this.pos.x, y: this.pos.y, alpha: 1});
         }
@@ -260,6 +282,7 @@ class Player {
         return false;
     }
     
+    // Check collision with platform
     checkPlatformCollision(platform) {
         const playerBounds = this.getBounds();
         const platBounds = platform.getBounds();
@@ -282,6 +305,7 @@ class Player {
     }
     
     draw(ctx) {
+        // Draw trail
         this.trail.forEach((t, i) => {
             ctx.save();
             ctx.globalAlpha = t.alpha * 0.4;
@@ -298,6 +322,7 @@ class Player {
         
         ctx.save();
         
+        // Flash when invincible
         if (this.invincible) {
             const flash = Math.floor(Date.now() / 100) % 2;
             if (flash === 0) {
@@ -308,6 +333,7 @@ class Player {
         
         ctx.translate(Math.floor(this.pos.x), Math.floor(this.pos.y));
         
+        // Squash and stretch effect
         let scaleX = 1;
         let scaleY = 1;
         if (!this.onGround && this.vel.y > 100) {
@@ -320,9 +346,11 @@ class Player {
         
         ctx.scale(scaleX, scaleY);
         
+        // Draw player square
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
         
+        // Draw eye
         ctx.fillStyle = '#1a1a1a';
         const eyeOffset = this.vel.x > 0 ? 3 : this.vel.x < 0 ? -3 : 0;
         ctx.fillRect(eyeOffset - 2, -3, 4, 4);
@@ -340,6 +368,8 @@ class Player {
     }
 }
 
+// ENEMY CLASS 
+// Flying enemies (wanderer or chaser)
 class Enemy {
     constructor(x, y, type) {
         this.pos = new Vector2D(x, y);
@@ -349,6 +379,7 @@ class Enemy {
         this.dead = false;
         
         if (type === 'wanderer') {
+            // Moves randomly
             this.color = '#ff6600';
             this.speed = 120;
             this.wanderAngle = Math.random() * Math.PI * 2;
@@ -361,6 +392,7 @@ class Enemy {
                 Math.sin(this.wanderAngle) * this.speed
             );
         } else if (type === 'chaser') {
+            // Chases the player
             this.color = '#ff0066';
             this.speed = 150;
             this.maxSpeed = 200;
@@ -370,6 +402,7 @@ class Enemy {
     
     update(dt, player) {
         if (this.type === 'wanderer') {
+            // Change direction randomly
             this.changeTimer += dt;
             if (this.changeTimer >= this.changeInterval) {
                 this.changeTimer = 0;
@@ -384,6 +417,7 @@ class Enemy {
             
             this.pos = this.pos.add(this.vel.multiply(dt));
             
+            // Bounce off edges
             if (this.pos.x < 30) {
                 this.pos.x = 30;
                 this.vel.x = Math.abs(this.vel.x);
@@ -402,6 +436,7 @@ class Enemy {
             }
             
         } else if (this.type === 'chaser') {
+            // Seek behavior - chase the player
             const toPlayer = player.pos.subtract(this.pos);
             const distance = toPlayer.magnitude();
             
@@ -424,6 +459,7 @@ class Enemy {
         ctx.save();
         ctx.translate(Math.floor(this.pos.x), Math.floor(this.pos.y));
         
+        // Rotate based on movement direction
         if (this.vel.magnitude() > 10) {
             const angle = Math.atan2(this.vel.y, this.vel.x);
             ctx.rotate(angle);
@@ -432,6 +468,7 @@ class Enemy {
         ctx.fillStyle = this.color;
         
         if (this.type === 'wanderer') {
+            // Draw triangle
             ctx.beginPath();
             ctx.moveTo(this.size/2, 0);
             ctx.lineTo(-this.size/2, -this.size/2);
@@ -439,11 +476,13 @@ class Enemy {
             ctx.closePath();
             ctx.fill();
         } else if (this.type === 'chaser') {
+            // Draw diamond
             ctx.save();
             ctx.rotate(Math.PI / 4);
             ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
             ctx.restore();
             
+            // Draw direction arrow
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.moveTo(this.size/2 - 2, 0);
@@ -466,6 +505,8 @@ class Enemy {
     }
 }
 
+// GAME CLASS
+// Main game manager
 class Game {
     constructor(canvas) {
         this.canvas = canvas;
@@ -545,9 +586,11 @@ class Game {
     spawnNewEnemy() {
         if (this.enemies.length >= this.maxEnemies) return;
         
+        // More chasers spawn as score increases
         const chaserChance = Math.min(0.2 + (this.score / 1000) * 0.15, 0.5);
         const type = Math.random() < chaserChance ? 'chaser' : 'wanderer';
         
+        // Spawn from random edge
         const side = Math.floor(Math.random() * 4);
         let x, y;
         
@@ -573,10 +616,12 @@ class Game {
         
         for (let i = 0; i < numCoins; i++) {
             if (Math.random() > 0.5) {
+                // Spawn in air
                 const x = 100 + Math.random() * 600;
                 const y = 100 + Math.random() * 300;
                 this.coins.push(new Coin(x, y));
             } else {
+                // Spawn on platform
                 const platform = this.platforms[1 + Math.floor(Math.random() * (this.platforms.length - 1))];
                 const x = platform.x + 30 + Math.random() * (platform.width - 60);
                 const y = platform.y - 20;
@@ -595,14 +640,17 @@ class Game {
             return;
         }
         
+        // Spawn enemies over time
         this.enemySpawnTimer += dt;
         if (this.enemySpawnTimer >= this.enemySpawnInterval) {
             this.enemySpawnTimer = 0;
             this.spawnNewEnemy();
+            // Progressive difficulty
             this.enemySpawnInterval = Math.max(2, 4 - (this.score / 1500));
             this.maxEnemies = Math.min(12, 8 + Math.floor(this.score / 600));
         }
         
+        // Spawn coins over time
         this.coinSpawnTimer += dt;
         if (this.coinSpawnTimer >= this.coinSpawnInterval) {
             this.coinSpawnTimer = 0;
@@ -629,6 +677,7 @@ class Game {
     }
     
     checkCollisions() {
+        // Collect coins
         for (let i = this.coins.length - 1; i >= 0; i--) {
             if (this.rectCollision(this.player.getBounds(), this.coins[i].getBounds())) {
                 this.score += 50;
@@ -639,6 +688,7 @@ class Game {
         
         if (this.player.invincible) return;
         
+        // Player hit by enemy
         const playerBounds = this.player.getBounds();
         for (let i = 0; i < this.enemies.length; i++) {
             if (this.rectCollision(playerBounds, this.enemies[i].getBounds())) {
@@ -647,6 +697,7 @@ class Game {
             }
         }
         
+        // Stomp on enemies
         if (this.player.vel.y > 0) {
             for (let i = this.enemies.length - 1; i >= 0; i--) {
                 const enemy = this.enemies[i];
@@ -662,6 +713,7 @@ class Game {
         }
     }
     
+    // AABB collision detection
     rectCollision(r1, r2) {
         return r1.x < r2.x + r2.width &&
                r1.x + r1.width > r2.x &&
@@ -758,6 +810,7 @@ class Game {
         this.spawnInitialCoins();
     }
     
+    // Main game loop
     run() {
         const currentTime = performance.now();
         const dt = (currentTime - this.lastTime) / 1000;
@@ -770,6 +823,7 @@ class Game {
     }
 }
 
+// Start the game when page loads
 window.addEventListener('load', () => {
     const canvas = document.getElementById('gameCanvas');
     new Game(canvas);
